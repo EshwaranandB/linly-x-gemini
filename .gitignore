@@ -1,15 +1,83 @@
-.DS_Store
-checkpoints/
-gfpgan/
+# Python
 __pycache__/
-*.pyc
-Linly-AI
-Qwen
-checkpoints
-temp
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gradio
+flagged/
+gradio_cached_examples/
+
+# Model Checkpoints (too large for git)
+checkpoints/
+models/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# MuseTalk specific
+Musetalk/models/
+Musetalk/checkpoints/
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.log
 *.wav
-*.vtt
-*.srt
-results/example_answer.mp4
-request-Linly-api.py
-results
+*.mp4
+*.avi
+answer.*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+
+# User uploads
+inputs/
+outputs/
+results/
+
+# Cache
+.cache/
+*.cache

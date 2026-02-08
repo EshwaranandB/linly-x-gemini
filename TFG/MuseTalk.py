@@ -102,6 +102,20 @@ def download_model():
         
 # download_model()  # for huggingface deployment.
 def video2imgs(vid_path, save_path, ext = '.png',cut_frame = 10000000):
+    # 1. Handle Static Images (The Fix for Custom Image Uploads)
+    if vid_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp')):
+        print(f"🖼️ Detected Image Avatar: {vid_path}")
+        frame = cv2.imread(vid_path)
+        if frame is not None:
+            # MuseTalk needs the file to be named "00000000.png" to start
+            cv2.imwrite(f"{save_path}/{0:08d}{ext}", frame)
+            print(f"✅ Saved single frame to {save_path}")
+            return
+        else:
+            print(f"❌ Error: Could not read image {vid_path}")
+            return
+
+    # 2. Handle Video (Standard Logic)
     cap = cv2.VideoCapture(vid_path)
     count = 0
     while True:
@@ -109,10 +123,12 @@ def video2imgs(vid_path, save_path, ext = '.png',cut_frame = 10000000):
             break
         ret, frame = cap.read()
         if ret:
-            cv2.imwrite(f"{save_path}/{count:08d}.png", frame)
+            cv2.imwrite(f"{save_path}/{count:08d}{ext}", frame)
             count += 1
         else:
             break
+    cap.release()
+    print(f"✅ Extracted {count} frames from video")
 
 def osmakedirs(path_list):
     for path in path_list:
@@ -158,6 +174,112 @@ class MuseTalk_RealTime:
         self.unet.model = self.unet.model.half()
         self.load = True
     
+    def inference_streaming(self, audio_buffer_16k, return_frame_only=True):
+        """
+        Real-time Inference for Gemini Live - LOW LATENCY MODE
+        Args:
+            audio_buffer_16k: Numpy array of 16kHz audio (approx 0.2s window)
+            return_frame_only: If True, returns just the face crop (faster). If False, blends with background.
+        Returns:
+            Single video frame (numpy array, uint8, RGB)
+        """
+        import soundfile as sf
+        import torch
+        
+        # 1. Save audio buffer to temp file (FAST: use ramdisk on Linux, temp on Windows)
+        temp_audio_path = "temp_stream_chunk.wav"
+        sf.write(temp_audio_path, audio_buffer_16k, 16000)
+        
+        # 2. Extract Whisper Features
+        whisper_feature = self.audio_processor.audio2feat(temp_audio_path)
+        whisper_chunks = self.audio_processor.feature2chunks(feature_array=whisper_feature, fps=25)
+        
+        if len(whisper_chunks) == 0:
+            return None
+            
+        current_chunk = whisper_chunks[0]  # Take the first chunk
+        
+        # 3. Initialize streaming index if not exists
+        if not hasattr(self, 'stream_idx'):
+            self.stream_idx = 0
+        
+        # 4. Ensure materials are loaded
+        if self.input_latent_list_cycle is None:
+            if os.path.exists(self.latents_out_path):
+                self.input_latent_list_cycle = torch.load(self.latents_out_path)
+            else:
+                raise RuntimeError("Avatar materials not prepared! Call prepare_material() first.")
+        
+        # 5. Get current frame latent (cycle through avatar frames)
+        idx = self.stream_idx % len(self.input_latent_list_cycle)
+        latent_batch = self.input_latent_list_cycle[idx]
+        
+        # 6. Prepare audio features
+        audio_feature_batch = torch.from_numpy(current_chunk).unsqueeze(0).to(
+            device=self.unet.device, 
+            dtype=self.unet.model.dtype
+        )
+        audio_feature_batch = self.pe(audio_feature_batch)
+        latent_batch = latent_batch.unsqueeze(0).to(dtype=self.unet.model.dtype)
+        
+        # 7. Run inference
+        pred_latents = self.unet.model(
+            latent_batch, 
+            self.timesteps, 
+            encoder_hidden_states=audio_feature_batch
+        ).sample
+        
+        recon = self.vae.decode_latents(pred_latents)
+        res_frame = recon[0]  # Get single frame
+        
+        # 8. Post-process
+        if return_frame_only:
+            # FAST MODE: Return just the face crop (256x256)
+            res_frame = (res_frame * 255).clip(0, 255).astype(np.uint8)
+        else:
+            # FULL MODE: Blend with background (slower)
+            # Load background frame and masks if needed
+            if not hasattr(self, 'coord_list_cycle') or not hasattr(self, 'frame_list_cycle'):
+                # Load from saved files
+                import pickle
+                with open(self.coords_path, 'rb') as f:
+                    self.coord_list_cycle = pickle.load(f)
+                with open(self.mask_coords_path, 'rb') as f:
+                    self.mask_coords_list_cycle = pickle.load(f)
+                # Load frames and masks
+                import glob
+                input_img_list = glob.glob(os.path.join(self.full_imgs_path, '*.[jpJP][pnPN]*[gG]'))
+                input_img_list = sorted(input_img_list, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+                from musetalk.utils.preprocessing import read_imgs
+                self.frame_list_cycle = read_imgs(input_img_list)
+                input_mask_list = glob.glob(os.path.join(self.mask_out_path, '*.[jpJP][pnPN]*[gG]'))
+                input_mask_list = sorted(input_mask_list, key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+                self.mask_list_cycle = read_imgs(input_mask_list)
+            
+            # Blend frame
+            bbox = self.coord_list_cycle[idx % len(self.coord_list_cycle)]
+            ori_frame = copy.deepcopy(self.frame_list_cycle[idx % len(self.frame_list_cycle)])
+            x1, y1, x2, y2 = bbox
+            
+            res_frame_resized = cv2.resize(res_frame.astype(np.uint8), (x2-x1, y2-y1))
+            mask = self.mask_list_cycle[idx % len(self.mask_list_cycle)]
+            mask_crop_box = self.mask_coords_list_cycle[idx % len(self.mask_coords_list_cycle)]
+            
+            from musetalk.utils.blending import get_image_blending
+            res_frame = get_image_blending(ori_frame, res_frame_resized, bbox, mask, mask_crop_box)
+        
+        # 9. Increment frame counter
+        self.stream_idx += 1
+        
+        # Clean up temp file
+        try:
+            os.remove(temp_audio_path)
+        except:
+            pass
+        
+        return res_frame
+    
+
     def process_frames(self, 
                        res_frame_queue,
                        video_len):

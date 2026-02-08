@@ -1,199 +1,275 @@
-import os
-import random 
 import gradio as gr
-from zhconv import convert
-from LLM import LLM
-from ASR import WhisperASR
-from TFG import SadTalker 
-from TTS import EdgeTTS
+import os
+import random
+import warnings
 from src.cost_time import calculate_time
 
-from configs import *
-os.environ["GRADIO_TEMP_DIR"]= './temp'
+# Make configs optional for deployment
+try:
+    from configs import *
+except ImportError:
+    ip = "0.0.0.0"
+    port = 7860
 
-description = """<p style="text-align: center; font-weight: bold;">
-    <span style="font-size: 28px;">Linly 智能对话系统 (Linly-Talker)</span>
-    <br>
-    <span style="font-size: 18px;" id="paper-info">
-        [<a href="https://zhuanlan.zhihu.com/p/671006998" target="_blank">知乎</a>]
-        [<a href="https://www.bilibili.com/video/BV1rN4y1a76x/" target="_blank">bilibili</a>]
-        [<a href="https://github.com/Kedreamix/Linly-Talker" target="_blank">GitHub</a>]
-        [<a herf="https://kedreamix.github.io/" target="_blank">个人主页</a>]
-    </span>
-    <br> 
-    <span>Linly-Talker 是一款智能 AI 对话系统，结合了大型语言模型 (LLMs) 与视觉模型，是一种新颖的人工智能交互方式。</span>
-</p>
-"""
+# --- NEW GEMINI LIVE IMPORTS ---
+try:
+    from LLM.GeminiLive import GeminiLiveClient
+    from TFG.Streamer import AudioBuffer
+    from TFG import MuseTalk_RealTime
+    gemini_available = True
+except ImportError:
+    gemini_available = False
+    print("⚠️ Gemini Live modules not found. Real-time mode disabled.")
 
-# 设定默认参数值，可修改
-source_image = r'example.png'
-blink_every = True
-size_of_image = 256
-preprocess_type = 'crop'
-facerender = 'facevid2vid'
-enhancer = False
-is_still_mode = False
-pic_path = "./inputs/girl.png"
-crop_pic_path = "./inputs/first_frame_dir_girl/girl.png"
-first_coeff_path = "./inputs/first_frame_dir_girl/girl.mat"
-crop_info = ((403, 403), (19, 30, 502, 513), [40.05956541381802, 40.17324339233366, 443.7892505041507, 443.9029284826663])
+# --- LEGACY IMPORTS (With Safety Checks) ---
+try:
+    from TFG import SadTalker
+    sadtalker = SadTalker(lazy_load=True)
+except:
+    sadtalker = None
 
-exp_weight = 1
-
-use_ref_video = False
-ref_video = None
-ref_info = 'pose'
-use_idle_mode = False
-length_of_audio = 5
-
-@calculate_time
-def Asr(audio):
-    try:
-        question = asr.transcribe(audio)
-        question = convert(question, 'zh-cn')
-    except Exception as e:
-        print("ASR Error: ", e)
-        question = 'Gradio存在一些bug，麦克风模式有时候可能音频还未传入，请重新点击一下语音识别即可'
-        gr.Warning(question)
-    return question
-
-@calculate_time
-def TTS_response(text, 
-                 voice, rate, volume, pitch,):
-    try:
-        tts.predict(text, voice, rate, volume, pitch , 'answer.wav', 'answer.vtt')
-    except:
-        os.system(f'edge-tts --text "{text}" --voice {voice} --write-media answer.wav --write-subtitles answer.vtt')
-    return 'answer.wav', 'answer.vtt'
-
-@calculate_time
-def LLM_response(question, voice = 'zh-CN-XiaoxiaoNeural', rate = 0, volume = 0, pitch = 0):
-    answer = llm.generate(question)
-    print(answer)
-    answer_audio, answer_vtt, _ = TTS_response(answer, voice, rate, volume, pitch)
-    return answer_audio, answer_vtt, answer
-
-@calculate_time
-def Talker_response(text, voice = 'zh-CN-XiaoxiaoNeural', rate = 0, volume = 100, pitch = 0, batch_size = 2):
-    voice = 'zh-CN-XiaoxiaoNeural' if voice not in tts.SUPPORTED_VOICE else voice
-    # print(voice , rate , volume , pitch)
-    driven_audio, driven_vtt, _ = LLM_response(text, voice, rate, volume, pitch)
-    pose_style = random.randint(0, 45)
-    video = talker.test(pic_path,
-                        crop_pic_path,
-                        first_coeff_path,
-                        crop_info,
-                        source_image,
-                        driven_audio,
-                        preprocess_type,
-                        is_still_mode,
-                        enhancer,
-                        batch_size,                            
-                        size_of_image,
-                        pose_style,
-                        facerender,
-                        exp_weight,
-                        use_ref_video,
-                        ref_video,
-                        ref_info,
-                        use_idle_mode,
-                        length_of_audio,
-                        blink_every,
-                        fps=20)
-    if driven_vtt:
-        return video, driven_vtt
-    else:
-        return video
-
-def main():
-    with gr.Blocks(analytics_enabled=False, title = 'Linly-Talker') as inference:
-        gr.HTML(description)
-        with gr.Row(equal_height=False):
-            with gr.Column(variant='panel'): 
-                with gr.Tabs(elem_id="question_audio"):
-                    with gr.TabItem('对话'):
-                        with gr.Column(variant='panel'):
-                            question_audio = gr.Audio(sources=['microphone','upload'], type="filepath", label = '语音对话')
-                            input_text = gr.Textbox(label="Input Text", lines=3)
-                            
-                            with gr.Accordion("Advanced Settings(高级设置语音参数) ",
-                                        open=False):
-                                voice = gr.Dropdown(tts.SUPPORTED_VOICE, 
-                                                    value='zh-CN-XiaoxiaoNeural', 
-                                                    label="Voice")
-                                rate = gr.Slider(minimum=-100,
-                                                    maximum=100,
-                                                    value=0,
-                                                    step=1.0,
-                                                    label='Rate')
-                                volume = gr.Slider(minimum=0,
-                                                        maximum=100,
-                                                        value=100,
-                                                        step=1,
-                                                        label='Volume')
-                                pitch = gr.Slider(minimum=-100,
-                                                    maximum=100,
-                                                    value=0,
-                                                    step=1,
-                                                    label='Pitch')
-                                batch_size = gr.Slider(minimum=1,
-                                                    maximum=10,
-                                                    value=2,
-                                                    step=1,
-                                                    label='Talker Batch size')
-                            asr_text = gr.Button('语音识别（语音对话后点击）')
-                            asr_text.click(fn=Asr,inputs=[question_audio],outputs=[input_text])
-                            
-                        # with gr.Column(variant='panel'):
-                        #     input_text = gr.Textbox(label="Input Text", lines=3)
-                        #     text_button = gr.Button("文字对话", variant='primary')
-                        
-                
-            with gr.Column(variant='panel'): 
-                with gr.Tabs():
-                    with gr.TabItem('数字人问答'):
-                        gen_video = gr.Video(label="Generated video", format="mp4", scale=1, autoplay=True)
-                video_button = gr.Button("提交", variant='primary')
-            video_button.click(fn=Talker_response,inputs=[input_text,voice, rate, volume, pitch, batch_size],outputs=[gen_video])
-
-        with gr.Row():
-            with gr.Column(variant='panel'):
-                    gr.Markdown("## Text Examples")
-                    examples =  ['应对压力最有效的方法是什么？',
-                        '如何进行时间管理？',
-                        '为什么有些人选择使用纸质地图或寻求方向，而不是依赖GPS设备或智能手机应用程序？',
-                        '近日，苹果公司起诉高通公司，状告其未按照相关合约进行合作，高通方面尚未回应。这句话中“其”指的是谁？',
-                        '三年级同学种树80颗，四、五年级种的棵树比三年级种的2倍多14棵，三个年级共种树多少棵?',
-                        '撰写一篇交响乐音乐会评论，讨论乐团的表演和观众的整体体验。',
-                        '翻译成中文：Luck is a dividend of sweat. The more you sweat, the luckier you get.',
-                        ]
-                    gr.Examples(
-                        examples = examples,
-                        fn = Talker_response,
-                        inputs = [input_text],
-                        outputs=[gen_video],
-                        # cache_examples = True,
-                    )
-    return inference
-
-
-    
-if __name__ == "__main__":
-    # llm = LLM(mode='offline').init_model('Linly', 'Linly-AI/Chinese-LLaMA-2-7B-hf')
-    # llm = LLM(mode='offline').init_model('Gemini', 'gemini-pro', api_key = "your api key")
-    # llm = LLM(mode='offline').init_model('Qwen', 'Qwen/Qwen-1_8B-Chat')
-    llm = LLM(mode='offline').init_model('Qwen', 'Qwen/Qwen-1_8B-Chat')
-    talker = SadTalker(lazy_load=True)
+try:
+    from ASR import WhisperASR
     asr = WhisperASR('base')
-    tts = EdgeTTS()
-    gr.close_all()
+except:
+    asr = None
+
+try:
+    from TTS import EdgeTTS
+    edgetts = EdgeTTS()
+except:
+    edgetts = None
+
+try:
+    from LLM import LLM
+    llm = LLM(mode='offline').init_model('Qwen', 'Qwen/Qwen-1_8B-Chat')
+except:
+    llm = None
+
+os.environ["GRADIO_TEMP_DIR"] = './temp'
+warnings.filterwarnings("ignore")
+
+# --- CONFIGURATION ---
+WSS_URL = "wss://gemini-live-bridge-production.up.railway.app/ws"
+DEFAULT_AVATAR = "./Musetalk/data/video/yongen_musev.mp4"
+
+# --- GLOBAL STATE ---
+if gemini_available:
+    client = GeminiLiveClient(websocket_url=WSS_URL)
+    audio_buffer = AudioBuffer(sample_rate=16000, context_size_seconds=0.2)
+    musetalker = None
+    avatar_prepared = False
+    current_avatar_path = None
+
+# --- GEMINI LIVE LOGIC ---
+async def start_session():
+    """Connect to Gemini Live"""
+    global musetalker
+    if not gemini_available: return "❌ Module Missing"
+    
+    if musetalker is None:
+        musetalker = MuseTalk_RealTime()
+        musetalker.init_model()
+        
+    print(f"🔌 Connecting to {WSS_URL}...")
+    success = await client.connect()
+    return "✅ Connected" if success else "❌ Connection Failed"
+
+def prepare_avatar(avatar_source, bbox_shift):
+    """Prepare Avatar for Streaming"""
+    global avatar_prepared, current_avatar_path, musetalker
+    if not gemini_available: return "❌ Module Missing"
+    
+    if musetalker is None:
+        musetalker = MuseTalk_RealTime()
+        musetalker.init_model()
+
+    if avatar_source is None:
+        avatar_path = DEFAULT_AVATAR
+    else:
+        avatar_path = avatar_source
+
+    try:
+        musetalker.prepare_material(avatar_path, bbox_shift)
+        current_avatar_path = avatar_path
+        avatar_prepared = True
+        audio_buffer.clear()
+        return "✅ Avatar Ready"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
+async def process_stream(audio_data):
+    """Real-time Loop"""
+    if not gemini_available or not client.running or not avatar_prepared:
+        return None, None
+
+    if audio_data is not None:
+        sr, y = audio_data
+        await client.send_audio(y, original_sr=sr)
+
+    import numpy as np
+    import asyncio
+    new_chunks = []
+    while not client.output_queue.empty():
+        try:
+            chunk = client.output_queue.get_nowait()
+            audio_buffer.push(chunk)
+            new_chunks.append(chunk)
+        except asyncio.QueueEmpty:
+            break
+            
+    ret_audio = (16000, np.concatenate(new_chunks)) if new_chunks else None
+    
+    current_window = audio_buffer.get_window()
+    ret_frame = None
+    if current_window is not None:
+        try:
+            ret_frame = musetalker.inference_streaming(current_window, return_frame_only=False)
+        except: 
+            pass
+
+    return ret_frame, ret_audio
+
+# --- LEGACY LOGIC ---
+@calculate_time
+def legacy_chat_response(audio, text_input, voice):
+    # 1. ASR
+    if audio and asr:
+        question = asr.transcribe(audio)
+    else:
+        question = text_input if text_input else "Hello"
+        
+    # 2. LLM
+    answer = llm.generate(question) if llm else "LLM not loaded."
+    
+    # 3. TTS
+    tts_file = 'answer.wav'
+    if edgetts:
+        try:
+            edgetts.predict(answer, voice, 0, 100, 0, tts_file, 'answer.vtt')
+        except:
+            pass
+        
+    # 4. SadTalker
+    video = None
+    if sadtalker:
+        try:
+            # Simplified call for demo stability
+            video = sadtalker.test(
+                "./inputs/girl.png", 
+                "./inputs/first_frame_dir_girl/girl.png",
+                "./inputs/first_frame_dir_girl/girl.mat",
+                ((403, 403), (19, 30, 502, 513), [40.05, 40.17, 443.78, 443.90]),
+                "./inputs/girl.png",
+                tts_file,
+                'crop', False, False, 1, 256, 0, 'facevid2vid', 1, False, None, 'pose', False, 5, True, 20
+            )
+        except Exception as e:
+            print(f"SadTalker error: {e}")
+        
+    return answer, video
+
+# --- UI ---
+def main():
+    with gr.Blocks(title="Linly-Talker Unified", theme=gr.themes.Soft()) as demo:
+        gr.HTML(
+            """
+            <div style='text-align: center; margin-bottom: 20px;'>
+                <h1>🎭 Linly-X-Gemini</h1>
+                <p>Real-time AI Avatar powered by Gemini 2.5 Flash + MuseTalk</p>
+            </div>
+            """
+        )
+        
+        with gr.Tabs():
+            # TAB 1: GEMINI LIVE (NEW)
+            with gr.Tab("⚡ Gemini Live (Real-time)"):
+                gr.Markdown("### Next-Generation Real-time Avatar Conversation")
+                
+                with gr.Row():
+                    with gr.Column(scale=1, variant='panel'):
+                        gr.Markdown("#### Setup")
+                        avatar_in = gr.Image(
+                            label="Avatar Image/Video", 
+                            sources=["upload"], 
+                            type="filepath",
+                            height=200
+                        )
+                        bbox = gr.Slider(
+                            label="Mouth Position Fix", 
+                            minimum=-10, 
+                            maximum=10, 
+                            value=5,
+                            info="+ = down, - = up"
+                        )
+                        btn_prep = gr.Button("1. 🎭 Prepare Avatar", variant="secondary", size="lg")
+                        btn_conn = gr.Button("2. 🔌 Connect Gemini", variant="primary", size="lg")
+                        status = gr.Textbox(label="Status", interactive=False)
+                    
+                    with gr.Column(scale=2):
+                        gr.Markdown("#### Live Interaction")
+                        avatar_out = gr.Image(label="Live Stream", streaming=True, height=400)
+                        mic = gr.Audio(
+                            sources=["microphone"], 
+                            type="numpy", 
+                            streaming=True,
+                            label="🎤 Your Voice"
+                        )
+                        speaker = gr.Audio(visible=False, autoplay=True, streaming=True)
+
+                btn_prep.click(prepare_avatar, inputs=[avatar_in, bbox], outputs=[status])
+                btn_conn.click(start_session, inputs=[], outputs=[status])
+                mic.stream(
+                    process_stream, 
+                    inputs=[mic], 
+                    outputs=[avatar_out, speaker],
+                    stream_every=0.04,
+                    time_limit=300
+                )
+
+            # TAB 2: LEGACY MODE (ORIGINAL)
+            with gr.Tab("🐢 Legacy Mode (Offline Generation)"):
+                gr.Markdown("### Traditional Pipeline: ASR → LLM → TTS → SadTalker")
+                
+                with gr.Row():
+                    with gr.Column(variant='panel'):
+                        gr.Markdown("#### Input")
+                        audio_in = gr.Audio(sources=["microphone"], type="filepath", label="Voice Input")
+                        text_in = gr.Textbox(label="Or Type Here", placeholder="Enter your question...")
+                        voice_sel = gr.Dropdown(
+                            edgetts.SUPPORTED_VOICE if edgetts else [], 
+                            label="Voice", 
+                            value='zh-CN-XiaoxiaoNeural'
+                        )
+                        btn_run = gr.Button("🎬 Generate", variant="primary", size="lg")
+                    
+                    with gr.Column():
+                        gr.Markdown("#### Output")
+                        text_out = gr.Textbox(label="LLM Response", lines=3)
+                        video_out = gr.Video(label="SadTalker Result", autoplay=True)
+                
+                btn_run.click(
+                    legacy_chat_response, 
+                    inputs=[audio_in, text_in, voice_sel], 
+                    outputs=[text_out, video_out]
+                )
+                
+                gr.Markdown(
+                    """
+                    ### 📊 Comparison:
+                    
+                    | Feature | Gemini Live | Legacy Mode |
+                    |---------|-------------|-------------|
+                    | **Latency** | <1 second | 10-30 seconds |
+                    | **Interaction** | Real-time streaming | Batch generation |
+                    | **Interruption** | ✅ Supported | ❌ Not supported |
+                    | **Quality** | MuseTalk (High) | SadTalker (Good) |
+                    | **Use Case** | Live demos, conversation | Offline content |
+                    """
+                )
+
+    return demo
+
+if __name__ == "__main__":
     demo = main()
-    demo.queue()
-    # demo.launch()
-    demo.launch(server_name=ip, # 本地端口localhost:127.0.0.1 全局端口转发:"0.0.0.0"
-                server_port=port,
-                # 似乎在Gradio4.0以上版本可以不使用证书也可以进行麦克风对话
-                ssl_certfile=ssl_certfile,
-                ssl_keyfile=ssl_keyfile,
-                ssl_verify=False,
-                debug=True)
+    demo.queue().launch(server_name=ip, server_port=port, debug=True, quiet=True)
