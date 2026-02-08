@@ -21,7 +21,7 @@ spaces
 moviepy
 librosa==0.10.2
 ultralytics
-gradio==4.44.1
+gradio
 scikit-learn
 
 # --- SadTalker (Strict Pinning Required) ---
@@ -37,8 +37,8 @@ joblib
 facexlib==0.3.0
 scikit-image
 protobuf
-# basicsr  # TEMPORARILY DISABLED - fails on Python 3.13
-# gfpgan   # TEMPORARILY DISABLED - depends on basicsr
+basicsr
+gfpgan
 matplotlib
 
 # --- MuseTalk ---

@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && git lfs install
 
-# 3. Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# 3. Upgrade pip and setuptools (CRITICAL for mmcv)
+RUN pip install --no-cache-dir --upgrade pip setuptools==70.0.0 wheel
 
 # 4. CRITICAL FIX: Install PyTorch FIRST
 # basicsr will CRASH if torch is not found during its installation.
@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir \
     torchaudio \
     --index-url https://download.pytorch.org/whl/cu118
 
-# 5. Install MMCV via MIM
+# 5. Install MMCV via MIM (after PyTorch and with upgraded setuptools)
 # Must be done after PyTorch but before requirements.txt
 RUN pip install --no-cache-dir openmim && \
     mim install "mmcv>=2.1.0"
