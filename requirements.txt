@@ -88,4 +88,4 @@ LangSegment
 # WeTextProcessing==1.0.3
 
 # --- Gemini Live Essentials ---
-websockets>=13.0
+websockets<13.0,>=10.0
