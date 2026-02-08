@@ -53,6 +53,10 @@ models/
 Musetalk/models/
 Musetalk/checkpoints/
 
+# Large video files (>10MB for Hugging Face)
+Musetalk/data/video/seaside4_musev.mp4
+Musetalk/data/video/*.mp4
+
 # Temporary files
 temp/
 tmp/
