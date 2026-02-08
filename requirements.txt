@@ -18,7 +18,8 @@ requests
 imageio[ffmpeg]
 omegaconf
 spaces
-moviepy
+moviepy<2.0
+trimesh
 librosa==0.10.2
 ultralytics
 gradio
