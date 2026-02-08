@@ -1,105 +1,81 @@
-from .Linly import Linly
-from .Qwen import Qwen
-from .Qwen2 import Qwen2
+import os
+
+# --- OPTIONAL IMPORTS (Handle Missing Modules Gracefully) ---
+try:
+    from .Linly import Linly
+    linly_available = True
+except ImportError:
+    Linly = None
+    linly_available = False
+    print("⚠️ Linly module not available")
+
 try:
     from .Gemini import Gemini
-except Exception as e:
-    print("Gemini模型加载失败，可能是因为没有google-generativeai库，但是Gemini模型不是必顂的，可以忽略")
-from .ChatGPT import ChatGPT
-from .ChatGLM import ChatGLM
-from .Llama2Chinese import Llama2Chinese
-from .GPT4Free import GPT4FREE
-from .QAnything import QAnything
+    gemini_available = True
+except ImportError:
+    Gemini = None
+    gemini_available = False
+    print("⚠️ Gemini (Standard) module not available")
 
-def test_Linly(question = "如何应对压力？", mode='offline', model_path="Linly-AI/Chinese-LLaMA-2-7B-hf"):
-    llm = Linly(mode, model_path)
-    answer = llm.generate(question)
-    print(answer)
-    
-def test_Qwen(question = "如何应对压力？", mode='offline', model_path="Qwen/Qwen-1_8B-Chat"):
-    llm = Qwen(mode, model_path)
-    answer = llm.generate(question)
-    print(answer)
-    
-def test_Gemini(question = "如何应对压力？", model_path='gemini-pro', api_key=None, proxy_url=None):
-    llm = Gemini(model_path, api_key, proxy_url)
-    answer = llm.generate(question)
-    print(answer)
-    
-def test_ChatGPT(question = "如何应对压力？", model_path = 'gpt-3.5-turbo', api_key = None, proxy_url = None):
-    llm = ChatGPT(model_path, api_key, proxy_url)
-    answer = llm.generate(question)
-    print(answer)
-    
+# --- GEMINI LIVE EXPORT ---
+# We export this so it can be imported via 'from LLM import GeminiLiveClient'
+try:
+    from .GeminiLive import GeminiLiveClient
+except ImportError:
+    print("⚠️ GeminiLive module not found in LLM package")
+
+# --- MINIMAL LLM FACTORY CLASS ---
 class LLM:
     def __init__(self, mode='offline'):
         self.mode = mode
+        self.model = None
         
-    def init_model(self, model_name, model_path='', api_key=None, proxy_url=None, prefix_prompt='''请用少于25个字回答以下问题\n\n'''):
-        if model_name not in ['Linly', 'Qwen', 'Qwen2', 'Gemini', 'ChatGLM', 'ChatGPT', 'Llama2Chinese', 'GPT4Free', 'QAnything', '直接回复 Direct Reply']:
-            raise ValueError("model_name must be one of ['Linly', 'Qwen', 'Qwen2', 'Gemini', 'ChatGLM', 'ChatGPT', 'Llama2Chinese', 'GPT4Free', 'QAnything', '直接回复 Direct Reply']")
-        if model_name == 'Linly':
-            llm = Linly(self.mode, model_path)
-        elif model_name == 'Qwen':
-            llm = Qwen(self.mode, model_path)
-        elif model_name == 'Qwen2':
-            llm = Qwen2(self.mode, model_path)
-        elif model_name == 'Gemini':
-            llm = Gemini(model_path, api_key, proxy_url)
-        elif model_name == 'ChatGLM':
-            llm = ChatGLM(self.mode, model_path)
-        elif model_name == 'ChatGPT':
-            llm = ChatGPT(model_path, api_key, proxy_url)
-        elif model_name == 'Llama2Chinese':
-            llm = Llama2Chinese(model_path, self.mode)
-        elif model_name == 'GPT4Free':
-            llm = GPT4FREE()
-        elif model_name == 'QAnything':
-            llm = QAnything()
-        elif model_name == '直接回复 Direct Reply':
-            llm = self
-        llm.prefix_prompt = prefix_prompt
-        return llm
+    def init_model(self, model_name, model_path='', api_key=None, proxy_url=None, prefix_prompt='Please answer in less than 25 words.\n\n'):
+        """
+        Initialize the selected LLM.
+        Supports: Linly, Gemini (Standard), and Direct Reply.
+        """
+        if model_name == 'Linly' and linly_available:
+            self.model = Linly(self.mode, model_path)
+        
+        elif model_name == 'Gemini' and gemini_available:
+            self.model = Gemini(model_path, api_key, proxy_url)
+            
+        elif model_name == 'Direct Reply' or model_name == '直接回复 Direct Reply':
+            # Bypass model, just echo/pass-through
+            self.model = self
+            
+        else:
+            print(f"⚠️ Model '{model_name}' not found or dependencies missing. Defaulting to Direct Reply.")
+            self.model = self
+            
+        # Set prompt prefix if the underlying model supports it
+        if hasattr(self.model, 'prefix_prompt'):
+            self.model.prefix_prompt = prefix_prompt
+            
+        return self.model
     
     def chat(self, system_prompt, message, history):
-        response = self.generate(message, system_prompt)
-        history.append((message, response))
-        return response, history
+        """
+        Standard Chat Interface
+        """
+        if self.model and self.model != self:
+            # Delegate to loaded model (Linly/Gemini)
+            return self.model.chat(system_prompt, message, history)
+        else:
+            # Direct Reply Fallback
+            response = self.generate(message, system_prompt)
+            history.append((message, response))
+            return response, history
 
-    def generate(self, question, system_prompt = 'system无效'):
+    def generate(self, question, system_prompt=''):
+        """
+        Direct generation (Non-Chat)
+        """
+        # If we are in "Direct Reply" mode (self.model == self), just return the question/echo
         return question
-    
-    def test_Linly(self, question="如何应对压力？", model_path="Linly-AI/Chinese-LLaMA-2-7B-hf"):
-        llm = Linly(self.mode, model_path)
-        answer = llm.generate(question)
-        print(answer)
 
-    def test_Qwen(self, question="如何应对压力？", model_path="Qwen/Qwen-1_8B-Chat"):
-        llm = Qwen(self.mode, model_path)
-        answer = llm.generate(question)
-        print(answer)
-
-    def test_Gemini(self, question="如何应对压力？", model_path='gemini-pro', api_key=None, proxy_url=None):
-        llm = Gemini(model_path, api_key, proxy_url)
-        answer = llm.generate(question)
-        print(answer)
-    
-    def test_ChatGPT(self, question="如何应对压力？", model_path = 'gpt-3.5-turbo', api_key = None, proxy_url = None):
-        llm = ChatGPT(model_path, api_key, proxy_url)
-        answer = llm.generate(question)
-        print(answer)
-        
-    def test_ChatGLM(self, question="如何应对压力？", model_path="THUDM/chatglm-6b"):
-        llm = ChatGLM(mode=self.mode, model_name_or_path=model_path)
-        answer = llm.generate(question)
-        print(answer)
-
-if __name__ == '__main__':
-    llm_class = LLM(mode='offline')
-    llm_class.init_model('直接回复 Direct Reply')
-    question = '如何应对压力？'
-    answer = llm_class.generate(question)
-    # llm.test_Qwen()
-    # llm.test_Linly()
-    # llm.test_Gemini()
-    # llm.test_ChatGLM()
+    def clear_history(self):
+        if self.model and self.model != self:
+            if hasattr(self.model, 'clear_history'):
+                self.model.clear_history()

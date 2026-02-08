@@ -158,14 +158,14 @@ async def process_stream(audio_data):
 
 # --- GRADIO UI LAYOUT ---
 
-with gr.Blocks(title="Gemini Live Avatar", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Linly-X-Gemini", theme=gr.themes.Soft()) as demo:
     
     # Header
     gr.HTML(
         """
         <div style='text-align: center; margin-bottom: 20px;'>
-            <h1>⚡ Gemini Live Real-time Avatar ⚡</h1>
-            <p>Powered by <b>Google Gemini 2.5 Flash</b> & <b>Linly-Talker</b></p>
+            <h1>🎭 Linly-X-Gemini</h1>
+            <p>Real-time AI Avatar powered by Gemini 2.5 Flash</p>
         </div>
         """
     )

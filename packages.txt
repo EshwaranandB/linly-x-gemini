@@ -1,0 +1,7 @@
+#!/bin/bash
+# Post-installation script for Hugging Face Spaces
+# This installs mmcv using mim (OpenMMLab package manager) for pre-built wheels
+
+echo "Installing mmcv via mim..."
+mim install "mmcv==2.1.0"
+echo "mmcv installation complete!"

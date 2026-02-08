@@ -1,0 +1,3 @@
+# Hugging Face Spaces - Post-Install Commands
+# Install mmcv using mim for pre-built wheels
+mim install "mmcv==2.1.0"
