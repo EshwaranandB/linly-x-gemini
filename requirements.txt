@@ -20,4 +20,5 @@ einops
 diffusers
 accelerate
 transformers
-mmcv
+setuptools>=65.0.0
+mmcv==2.1.0
