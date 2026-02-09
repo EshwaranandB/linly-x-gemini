@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 # Default avatar video path (ensure this file exists!)
 DEFAULT_AVATAR_VIDEO = "./Musetalk/data/video/yongen_musev.mp4" 
 # Your Railway Bridge URL
-WSS_URL = "wss://gemini-live-service-production.up.railway.app/ws"
+WSS_URL = "wss://gemini-live-bridge-production.up.railway.app/ws"
 # Default mouth opening adjustment
 DEFAULT_BBOX_SHIFT = 5 
 
