@@ -4,7 +4,7 @@ set -e
 echo "Starting Automated Model Download..."
 
 # Install huggingface_hub if not present (just in case)
-pip install --upgrade huggingface_hub
+# pip install --upgrade huggingface_hub
 
 # 1. Create Directories
 mkdir -p Musetalk/models/dwpose
