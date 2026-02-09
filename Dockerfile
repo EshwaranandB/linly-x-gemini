@@ -34,11 +34,14 @@ RUN pip install --no-cache-dir \
 # We must use --no-build-isolation to fix the "No module named pip" error.
 RUN pip install --no-cache-dir --no-build-isolation chumpy
 
-# 6. Install MMCV and MMPOSE via MIM
+# 6. Install MMCV, MMPOSE, and MMDET via MIM
 # Now that PyTorch and Chumpy are ready, this will run smoothly.
+# mmpose requires chumpy (installed above)
+# mmdet is required for MuseTalk's face detection
 RUN pip install --no-cache-dir openmim && \
     mim install "mmcv>=2.1.0" && \
-    mim install "mmpose>=1.0.0"
+    mim install "mmpose>=1.0.0" && \
+    mim install "mmdet>=3.0.0"
 
 # 7. Install remaining dependencies
 COPY requirements.txt /tmp/requirements.txt

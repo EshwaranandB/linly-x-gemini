@@ -21,6 +21,7 @@ spaces
 moviepy<2.0
 trimesh
 pymcubes  # For NeRFTalk
+torch-ema # For NeRFTalk
 librosa==0.10.2
 ultralytics
 gradio
