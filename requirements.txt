@@ -18,7 +18,7 @@ pymcubes  # For NeRFTalk
 torch-ema # For NeRFTalk
 librosa==0.10.2
 ultralytics
-gradio
+gradio>=5.0.0
 scikit-learn
 
 # --- SadTalker (Strict Pinning Required) ---
