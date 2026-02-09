@@ -21,9 +21,8 @@ RUN apt-get update && apt-get install -y \
 # 3. Upgrade pip, wheel, and setuptools
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools
 
-# 4. CRITICAL: Install Specific PyTorch Version (2.1.2)
-# We downgrade to 2.1.2 because mmcv 2.1.0 has pre-built wheels for it.
-# mmcv 2.1.0 is required by mmdet < 2.2.0.
+# 4. CRITICAL: Install PyTorch 2.1.2 (Golden Version for this stack)
+# We strictly use 2.1.2 to match the pre-built wheels for mmcv 2.1.0
 RUN pip install --no-cache-dir \
     torch==2.1.2+cu118 \
     torchvision==0.16.2+cu118 \
@@ -31,22 +30,16 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cu118
 
 # 5. CRITICAL FIX: Install chumpy manually
-# mmpose requires chumpy, but chumpy's installer is broken in modern pip.
-# We must use --no-build-isolation to fix the "No module named pip" error.
+# Prevents the "No module named pip" error during mmpose install
 RUN pip install --no-cache-dir --no-build-isolation chumpy
 
-# 6. Install MMCV, MMPOSE, and MMDET via MIM
-# Now that PyTorch and Chumpy are ready, this will run smoothly.
-# mmpose requires chumpy (installed above)
-# mmdet is required for MuseTalk's face detection
-# mmdet requires mmcv<2.2.0
-# CRITICAL FIX: Install specific MMCV version (2.1.0) to satisfy mmdet (<2.2.0)
-# mmpose requires chumpy (installed above)
-# mmdet is required for MuseTalk's face detection
+# 6. CRITICAL FIX: Install Pinned OpenMMLab Stack
+# We install ALL 3 at once with strict versions to prevent auto-upgrade.
+# mmcv==2.1.0  -> The base (Must be < 2.2.0)
+# mmdet==3.2.0 -> Compatible with mmcv 2.1.0
+# mmpose==1.2.0 -> Compatible with mmcv 2.1.0
 RUN pip install --no-cache-dir openmim && \
-    mim install "mmcv==2.1.0" && \
-    mim install "mmpose>=1.0.0" && \
-    mim install "mmdet>=3.0.0"
+    mim install "mmcv==2.1.0" "mmdet==3.2.0" "mmpose==1.2.0"
 
 # 7. Install remaining dependencies
 COPY requirements.txt /tmp/requirements.txt

@@ -1,10 +1,4 @@
-# --- PyTorch Core (Latest available with CUDA 11.8) ---
---extra-index-url https://download.pytorch.org/whl/cu118
-torch
-torchvision
-torchaudio
-
-# --- Critical Fixes ---
+# --- PyTorch Core is handled by Dockerfile (Pinned to 2.1.2) ---# --- Critical Fixes ---
 # ⚠️ SadTalker & BasicSR CRASH with Numpy 2.0+. We MUST pin this.
 numpy<2.0
 
