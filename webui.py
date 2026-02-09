@@ -282,7 +282,6 @@ with gr.Blocks(title="Linly-X-Gemini", theme=gr.themes.Soft()) as demo:
         fn=process_stream,
         inputs=[mic_input],
         outputs=[avatar_output, speaker_output],
-        time_limit=300, # 5 minute timeout safety
         stream_every=0.04
     )
 
