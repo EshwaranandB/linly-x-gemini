@@ -1,4 +1,9 @@
-https://youtu.be/z6SfvnNrRPQ
+## 🎥 Demo Video
+
+[![Linly-Gemini Live Demo](https://img.youtube.com/vi/z6SfvnNrRPQ/0.jpg)](https://www.youtube.com/watch?v=z6SfvnNrRPQ)
+
+
+
 # 🎭 Linly-Gemini Live: Real-Time AI Avatar(PersonasAI)
 
 <div align="center">
@@ -69,13 +74,4 @@ This project combines state-of-the-art storage, inference, and LLM technologies:
 
 ---
 
-## 🐳 Docker Deployment
 
-To run in a consistent environment or deploy to cloud platforms:
-
-```bash
-# Build the image
-docker build -t linly-gemini .
-
-# Run the container (with GPU support)
-docker run --gpus all -p 7860:7860 linly-gemini
