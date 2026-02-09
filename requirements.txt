@@ -20,6 +20,7 @@ omegaconf
 spaces
 moviepy<2.0
 trimesh
+pymcubes  # For NeRFTalk
 librosa==0.10.2
 ultralytics
 gradio
@@ -43,6 +44,7 @@ gfpgan
 matplotlib
 
 # --- MuseTalk ---
+mmpose  # Required for MuseTalk
 diffusers
 huggingface_hub
 accelerate
