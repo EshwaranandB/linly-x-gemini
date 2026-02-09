@@ -48,6 +48,11 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # 8. Copy application code
 COPY . /app
 
+# 8.5 Download Models
+# Make sure the script is executable and run it
+RUN chmod +x /app/scripts/download_models.sh && \
+    /app/scripts/download_models.sh
+
 # 9. Setup permissions for Hugging Face Spaces
 RUN mkdir -p /home/user && \
     ([ -e /home/user/app ] || ln -s /app/ /home/user/app) || true
