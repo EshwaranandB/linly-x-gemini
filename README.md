@@ -17,7 +17,6 @@
 
 
 
-![ARCHITECTURE](https://i.ibb.co/mjH6rkJ/Whats-App-Image-2026-02-10-at-3-07-12-AM.jpg)
 
 
 **A real-time, conversational AI avatar powered by Google's Gemini Live and TMElyralab's MuseTalk.**
@@ -48,6 +47,6 @@ This project combines state-of-the-art storage, inference, and LLM technologies:
 4.  **Face Engine (MuseTalk)**: Takes the audio from Gemini and the video frames of the avatar to generate lip-synced video in real-time.
 
 
-
+![ARCHITECTURE](https://i.ibb.co/mjH6rkJ/Whats-App-Image-2026-02-10-at-3-07-12-AM.jpg)
 
 
