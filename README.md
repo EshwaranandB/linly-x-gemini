@@ -4,6 +4,7 @@
 
 
 
+
 # 🎭 Linly-Gemini Live: Real-Time AI Avatar(PersonasAI)
 
 <div align="center">
@@ -13,6 +14,11 @@
 ![Gradio](https://img.shields.io/badge/Gradio-4.44.0-orange?style=for-the-badge&logo=gradio&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini-Live-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
+
+
+![ARCHITECTURE](https://i.ibb.co/mjH6rkJ/Whats-App-Image-2026-02-10-at-3-07-12-AM.jpg)
+
 
 **A real-time, conversational AI avatar powered by Google's Gemini Live and TMElyralab's MuseTalk.**
 
