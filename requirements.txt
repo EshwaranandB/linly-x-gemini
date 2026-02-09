@@ -44,7 +44,7 @@ gfpgan
 matplotlib
 
 # --- MuseTalk ---
-mmpose  # Required for MuseTalk
+# mmpose is installed via Dockerfile using mim
 diffusers
 huggingface_hub
 accelerate

@@ -1,11 +1,10 @@
-# 1. Use Python 3.10 (Required for stable mmcv/basicsr wheels)
+# 1. Use Python 3.10 (Required for stable ML libraries)
 FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
 
 # 2. Install system dependencies
-# libgl1/libsm6 for OpenCV, ffmpeg for audio, build-essential for compiling basicsr
 RUN apt-get update && apt-get install -y \
     git \
     git-lfs \
@@ -19,22 +18,24 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && git lfs install
 
-# 3. Upgrade pip and setuptools (CRITICAL for mmcv)
-RUN pip install --no-cache-dir --upgrade pip setuptools==70.0.0 wheel
+# 3. Upgrade pip, wheel, and setuptools
+RUN pip install --no-cache-dir --upgrade pip wheel setuptools
 
-# 4. CRITICAL FIX: Install PyTorch FIRST
-# basicsr will CRASH if torch is not found during its installation.
-# Using latest PyTorch with CUDA 11.8 support
+# 4. CRITICAL: Install Specific PyTorch Version (2.4.1)
+# We pin this version because MMCV has pre-built wheels for it.
+# If we use "latest", MMCV tries to compile from source and fails.
 RUN pip install --no-cache-dir \
-    torch \
-    torchvision \
-    torchaudio \
+    torch==2.4.1+cu118 \
+    torchvision==0.19.1+cu118 \
+    torchaudio==2.4.1+cu118 \
     --index-url https://download.pytorch.org/whl/cu118
 
-# 5. Install MMCV via MIM (after PyTorch and with upgraded setuptools)
-# Must be done after PyTorch but before requirements.txt
+# 5. Install MMCV and MMPOSE via MIM
+# Since we have a compatible PyTorch version now, this will download a .whl file
+# instead of compiling, avoiding the pkg_resources error.
 RUN pip install --no-cache-dir openmim && \
-    mim install "mmcv>=2.1.0"
+    mim install "mmcv>=2.1.0" && \
+    mim install "mmpose>=1.0.0"
 
 # 6. Install remaining dependencies
 COPY requirements.txt /tmp/requirements.txt
