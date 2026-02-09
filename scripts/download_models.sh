@@ -38,8 +38,10 @@ huggingface-cli download TMElyralab/MuseTalk musetalk/musetalk.json --local-dir 
 huggingface-cli download TMElyralab/MuseTalk musetalk/pytorch_model.bin --local-dir checkpoints --local-dir-use-symlinks False
 huggingface-cli download TMElyralab/MuseTalk musetalk/musetalk_whisper_adapter_model.bin --local-dir checkpoints --local-dir-use-symlinks False || echo "Adapter model optional/not found"
 
-# whisper (if needed inside checkpoints/whisper)
-# huggingface-cli download TMElyralab/MuseTalk whisper/tiny.pt --local-dir checkpoints/whisper --local-dir-use-symlinks False || true
+# whisper (Required by MuseTalk)
+mkdir -p Musetalk/models/whisper
+echo "Downloading Whisper tiny.pt..."
+wget -nc -O Musetalk/models/whisper/tiny.pt https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt
 
 # 6. GFPGAN (Optional but good to have)
 echo "Downloading GFPGAN..."
