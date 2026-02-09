@@ -38,8 +38,9 @@ RUN pip install --no-cache-dir --no-build-isolation chumpy
 # Now that PyTorch and Chumpy are ready, this will run smoothly.
 # mmpose requires chumpy (installed above)
 # mmdet is required for MuseTalk's face detection
+# mmdet requires mmcv<2.2.0
 RUN pip install --no-cache-dir openmim && \
-    mim install "mmcv>=2.1.0" && \
+    mim install "mmcv>=2.1.0,<2.2.0" && \
     mim install "mmpose>=1.0.0" && \
     mim install "mmdet>=3.0.0"
 
