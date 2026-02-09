@@ -19,11 +19,12 @@ wget -nc -O Musetalk/models/dwpose/dw-ll_ucoco_384.pth https://huggingface.co/yz
 wget -nc -O Musetalk/models/dwpose/yolox_l.onnx https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx
 
 # 3. Download Face Parsing Models
+mkdir -p Musetalk/models/face-parse-bisent
 echo "Downloading Face Parsing..."
 # Use a public mirror for 79999_iter.pth since the original repo might be gated/private
 # Mirror: leonelhs/faceparser (Public)
-wget -nc -O Musetalk/models/face-parsing/79999_iter.pth https://huggingface.co/leonelhs/faceparser/resolve/main/79999_iter.pth
-wget -nc -O Musetalk/models/face-parsing/resnet18-5c106cde.pth https://download.pytorch.org/models/resnet18-5c106cde.pth
+wget -nc -O Musetalk/models/face-parse-bisent/79999_iter.pth https://huggingface.co/leonelhs/faceparser/resolve/main/79999_iter.pth
+wget -nc -O Musetalk/models/face-parse-bisent/resnet18-5c106cde.pth https://download.pytorch.org/models/resnet18-5c106cde.pth
 
 # 4. Download VAE
 echo "Downloading VAE..."
