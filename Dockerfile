@@ -21,12 +21,13 @@ RUN apt-get update && apt-get install -y \
 # 3. Upgrade pip, wheel, and setuptools
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools
 
-# 4. CRITICAL: Install Specific PyTorch Version (2.4.1)
-# We pin this version because MMCV has pre-built wheels for it.
+# 4. CRITICAL: Install Specific PyTorch Version (2.1.2)
+# We downgrade to 2.1.2 because mmcv 2.1.0 has pre-built wheels for it.
+# mmcv 2.1.0 is required by mmdet < 2.2.0.
 RUN pip install --no-cache-dir \
-    torch==2.4.1+cu118 \
-    torchvision==0.19.1+cu118 \
-    torchaudio==2.4.1+cu118 \
+    torch==2.1.2+cu118 \
+    torchvision==0.16.2+cu118 \
+    torchaudio==2.1.2+cu118 \
     --index-url https://download.pytorch.org/whl/cu118
 
 # 5. CRITICAL FIX: Install chumpy manually
@@ -39,8 +40,11 @@ RUN pip install --no-cache-dir --no-build-isolation chumpy
 # mmpose requires chumpy (installed above)
 # mmdet is required for MuseTalk's face detection
 # mmdet requires mmcv<2.2.0
+# CRITICAL FIX: Install specific MMCV version (2.1.0) to satisfy mmdet (<2.2.0)
+# mmpose requires chumpy (installed above)
+# mmdet is required for MuseTalk's face detection
 RUN pip install --no-cache-dir openmim && \
-    mim install "mmcv>=2.1.0,<2.2.0" && \
+    mim install "mmcv==2.1.0" && \
     mim install "mmpose>=1.0.0" && \
     mim install "mmdet>=3.0.0"
 
