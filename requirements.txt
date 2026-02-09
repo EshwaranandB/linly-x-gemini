@@ -43,7 +43,7 @@ matplotlib
 # --- MuseTalk ---
 # mmpose is installed via Dockerfile using mim
 diffusers==0.24.0
-huggingface_hub==0.19.4
+tokenizers>=0.15.0
 accelerate==0.25.0
 opencv-python-headless
 soundfile
