@@ -1,5 +1,5 @@
 ## 🎥 Demo Video
-
+<div align="center">
 [![Linly-Gemini Live Demo](https://img.youtube.com/vi/z6SfvnNrRPQ/0.jpg)](https://www.youtube.com/watch?v=z6SfvnNrRPQ)
 
 
