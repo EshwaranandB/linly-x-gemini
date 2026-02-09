@@ -9,10 +9,6 @@ import warnings
 # Suppress warnings for clean demo
 warnings.filterwarnings('ignore')
 
-# --- IMPORTS ---
-from LLM.GeminiLive import GeminiLiveClient
-from TFG.Streamer import AudioBuffer
-
 # --- CONFIGURATION ---
 # Default avatar video path (ensure this file exists!)
 DEFAULT_AVATAR_VIDEO = "./Musetalk/data/video/yongen_musev.mp4" 
@@ -21,49 +17,68 @@ WSS_URL = "wss://gemini-live-bridge-production.up.railway.app/ws"
 # Default mouth opening adjustment
 DEFAULT_BBOX_SHIFT = 5 
 
-# --- GLOBAL STATE ---
-# Initialize the WebSocket client
-client = GeminiLiveClient(websocket_url=WSS_URL)
-# Audio buffer: 200ms window is optimal for MuseTalk real-time inference
-audio_buffer = AudioBuffer(sample_rate=16000, context_size_seconds=0.2) 
-
+# --- LAZY GLOBAL STATE ---
+# We initialize these as None to save RAM at startup
+client = None
+audio_buffer = None
 musetalker = None
 avatar_prepared = False
 current_avatar_path = None
 
 # --- CORE FUNCTIONS ---
 
+def init_audio_system():
+    """Initialize AudioBuffer and Gemini Client only when needed."""
+    global client, audio_buffer
+    
+    if client is None:
+        # Import here to avoid loading network libs at startup
+        from LLM.GeminiLive import GeminiLiveClient
+        client = GeminiLiveClient(websocket_url=WSS_URL)
+        
+    if audio_buffer is None:
+        # Import directly from submodule to avoid TFG/__init__.py trigger
+        from TFG.Streamer import AudioBuffer
+        audio_buffer = AudioBuffer(sample_rate=16000, context_size_seconds=0.2)
+
 def init_model():
     """Lazy load the MuseTalk model only when needed to save VRAM on startup."""
     global musetalker
     if musetalker is None:
         print("🚀 Loading MuseTalk Model...")
-        from TFG import MuseTalk_RealTime
+        # CRITICAL: Import directly from file to bypass package init
+        from TFG.MuseTalk import MuseTalk_RealTime
         musetalker = MuseTalk_RealTime()
         musetalker.init_model()
         print("✅ MuseTalk Model Loaded")
+    return musetalker
 
 def prepare_avatar(avatar_source, bbox_shift, use_default):
     """
     Pre-processes the avatar image/video.
     This creates the latents and coordinate cycles needed for infinite streaming.
     """
-    global avatar_prepared, current_avatar_path, musetalker
+    global avatar_prepared, current_avatar_path
     
     # 1. Initialize Model
-    init_model()
+    model = init_model()
+    if model is None:
+        return "❌ Model failed to load (Check logs)"
     
-    # 2. Reset Previous State (if any)
+    # 2. Initialize Audio System
+    init_audio_system()
+    
+    # 3. Reset Previous State (if any)
     if avatar_prepared:
         avatar_prepared = False
-        audio_buffer.clear()
+        if audio_buffer: audio_buffer.clear()
         # Reset internal model state if needed
-        if hasattr(musetalker, 'input_latent_list_cycle'):
-             musetalker.input_latent_list_cycle = None
-        if hasattr(musetalker, 'stream_idx'):
-             delattr(musetalker, 'stream_idx')
+        if hasattr(model, 'input_latent_list_cycle'):
+             model.input_latent_list_cycle = None
+        if hasattr(model, 'stream_idx'):
+             delattr(model, 'stream_idx')
 
-    # 3. Determine Source File
+    # 4. Determine Source File
     if use_default:
         avatar_path = DEFAULT_AVATAR_VIDEO
         print("📸 Using Default Avatar")
@@ -73,15 +88,15 @@ def prepare_avatar(avatar_source, bbox_shift, use_default):
         avatar_path = avatar_source
         print(f"📸 Using Custom Avatar: {avatar_path}")
 
-    # 4. Run Preparation
+    # 5. Run Preparation
     try:
         print(f"🎭 Preparing materials for: {os.path.basename(avatar_path)}")
         # This handles both Video (frames) and Images (single frame repeat)
-        musetalker.prepare_material(avatar_path, bbox_shift)
+        model.prepare_material(avatar_path, bbox_shift)
         
         current_avatar_path = avatar_path
         avatar_prepared = True
-        audio_buffer.clear() # Ensure buffer is clean for fresh start
+        if audio_buffer: audio_buffer.clear() # Ensure buffer is clean for fresh start
         
         return f"✅ Ready: {os.path.basename(avatar_path)}"
     except Exception as e:
@@ -90,7 +105,7 @@ def prepare_avatar(avatar_source, bbox_shift, use_default):
 
 async def start_session():
     """Establishes the WebSocket connection to the Railway Bridge."""
-    init_model()
+    init_audio_system()
     
     print(f"🔌 Connecting to Bridge: {WSS_URL}...")
     success = await client.connect()
@@ -110,9 +125,12 @@ async def process_stream(audio_data):
     # Initialize returns
     ret_frame = None
     ret_audio = None
+    
+    # Ensure systems are initialized
+    init_audio_system()
 
     # Stop if not connected or avatar not ready
-    if not client.running or not avatar_prepared:
+    if not client or not client.running or not avatar_prepared or not musetalker:
         return None, None
 
     # --- 1. SEND USER AUDIO ---
@@ -148,6 +166,7 @@ async def process_stream(audio_data):
             # Streaming Inference (Low Latency)
             ret_frame = musetalker.inference_streaming(
                 audio_buffer_16k=current_audio_window,
+                avatar_image_path=current_avatar_path,
                 return_frame_only=False # Set True for faster speed (crop only)
             )
         except Exception as e:
