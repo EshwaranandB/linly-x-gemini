@@ -9,6 +9,20 @@ import warnings
 # Suppress warnings for clean demo
 warnings.filterwarnings('ignore')
 
+# --- MONKEY PATCH FOR PYTORCH 2.1 + DIFFUSERS ---
+# Newer diffusers libs try to access torch.xpu which doesn't exist in 2.1
+import torch
+if not hasattr(torch, 'xpu'):
+    class MockXPU:
+        @staticmethod
+        def empty_cache():
+            pass
+        @staticmethod
+        def is_available():
+            return False
+    torch.xpu = MockXPU()
+# -----------------------------------------------
+
 # --- CONFIGURATION ---
 # Default avatar video path (ensure this file exists!)
 DEFAULT_AVATAR_VIDEO = "./Musetalk/data/video/yongen_musev.mp4" 
