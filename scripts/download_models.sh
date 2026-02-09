@@ -30,16 +30,15 @@ echo "Downloading VAE..."
 wget -nc -O Musetalk/models/sd-vae-ft-mse/config.json https://huggingface.co/stabilityai/sd-vae-ft-mse/resolve/main/config.json
 wget -nc -O Musetalk/models/sd-vae-ft-mse/diffusion_pytorch_model.bin https://huggingface.co/stabilityai/sd-vae-ft-mse/resolve/main/diffusion_pytorch_model.bin
 
-# 5. Download MuseTalk Checkpoints from Kedreamix/Linly-Talker (using huggingface-cli)
+# 5. Download MuseTalk Checkpoints (using TMElyralab/MuseTalk)
 echo "Downloading MuseTalk Checkpoints..."
-# We explicitly download specific files to avoid downloading the whole repo
-# Checkpoints
-huggingface-cli download Kedreamix/Linly-Talker checkpoints/musetalk.json --local-dir . --local-dir-use-symlinks False
-huggingface-cli download Kedreamix/Linly-Talker checkpoints/pytorch_model.bin --local-dir . --local-dir-use-symlinks False
-huggingface-cli download Kedreamix/Linly-Talker checkpoints/musetalk_whisper_adapter_model.bin --local-dir . --local-dir-use-symlinks False || echo "Adapter model optional/not found"
+# Official repo: TMElyralab/MuseTalk
+huggingface-cli download TMElyralab/MuseTalk musetalk/musetalk.json --local-dir checkpoints --local-dir-use-symlinks False
+huggingface-cli download TMElyralab/MuseTalk musetalk/pytorch_model.bin --local-dir checkpoints --local-dir-use-symlinks False
+huggingface-cli download TMElyralab/MuseTalk musetalk/musetalk_whisper_adapter_model.bin --local-dir checkpoints --local-dir-use-symlinks False || echo "Adapter model optional/not found"
 
 # whisper (if needed inside checkpoints/whisper)
-# huggingface-cli download Kedreamix/Linly-Talker checkpoints/whisper/tiny.pt --local-dir . --local-dir-use-symlinks False || true
+# huggingface-cli download TMElyralab/MuseTalk whisper/tiny.pt --local-dir checkpoints/whisper --local-dir-use-symlinks False || true
 
 # 6. GFPGAN (Optional but good to have)
 echo "Downloading GFPGAN..."
